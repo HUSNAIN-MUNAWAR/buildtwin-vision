@@ -1,0 +1,9 @@
+activity_id,name,work_package,zone,planned_start,planned_finish,planned_progress,actual_progress,predecessors,critical,contractor
+A100,Foundations - Main Clinical Building,Foundations,Ground Floor East Wing,2026-05-01,2026-06-10,100,100,,true,Atlas Civil
+A110,Ground Floor Structural Slab,Structural Concrete,Ground Floor East Wing,2026-06-05,2026-07-05,100,96,A100,true,Prime Concrete
+A120,Level 1 Core Columns,Structural Concrete,Level 1 Core,2026-06-28,2026-07-18,95,62,A110,true,Prime Concrete
+A130,Level 1 Core Beams,Structural Concrete,Level 1 Core,2026-07-12,2026-08-03,36,18,A120,true,Prime Concrete
+A140,Patient Room Masonry,Masonry,Level 1 Patient Rooms,2026-07-15,2026-08-18,14,20,A120,false,MasonWorks
+A150,Roof Mechanical Curbs,Mechanical,Roof Mechanical Zone,2026-08-01,2026-08-19,0,0,A130,false,Northstar MEP
+A160,Parking Deck Railing,Steel,Parking Deck Zone A,2026-07-01,2026-07-28,68,68,,false,SteelLine
+A170,Utility Trench Plumbing,Plumbing,Utility Trench,2026-06-25,2026-07-25,80,72,,false,Northstar MEP

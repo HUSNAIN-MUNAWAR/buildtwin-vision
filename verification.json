@@ -1,0 +1,38 @@
+{
+  "project": "BuildTwin Vision",
+  "verified_at": "2026-07-19",
+  "backend": {
+    "compile": "passed",
+    "ruff": "passed",
+    "mypy": "passed: 36 source files",
+    "pytest": "passed: 19 tests",
+    "alembic": "passed: 20260719_0001 head",
+    "smoke_api": "passed: health, projects, dashboard, schedule, risk"
+  },
+  "seed": {
+    "ifc_elements": 12,
+    "schedule_activities": 8,
+    "decoded_video_frames": 72,
+    "sampled_video_frames": 6,
+    "changed_area_percent": 12.956,
+    "at_risk_activities": 2,
+    "blocked_activities": ["A150"],
+    "pdf_report": "sample_data/reports/northstar_weekly_progress.pdf"
+  },
+  "frontend": {
+    "install": "not completed locally: npm ci/npm install/corepack pnpm install timed out in this Windows environment",
+    "typescript": "not completed in latest local run: blocked by incomplete node_modules",
+    "test": "passed",
+    "eslint": "not completed in latest local run: blocked by incomplete node_modules",
+    "production_build": "not completed in latest local run: blocked by incomplete node_modules",
+    "next_version": "16.2.10"
+  },
+  "infrastructure": {
+    "compose_yaml": "configured",
+    "docker_runtime": "not executed: Docker CLI unavailable"
+  },
+  "screenshots": {
+    "count": 15,
+    "method": "existing authenticated seeded API previews retained; local regeneration blocked by missing WeasyPrint native Pango/GObject libraries"
+  }
+}

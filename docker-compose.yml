@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-buildtwin}
+      POSTGRES_USER: ${POSTGRES_USER:-buildtwin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-buildtwin-dev}
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-buildtwin}"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes: ["redis_data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  api:
+    build: {context: ., dockerfile: infra/docker/backend.Dockerfile}
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-buildtwin}:${POSTGRES_PASSWORD:-buildtwin-dev}@postgres:5432/${POSTGRES_DB:-buildtwin}
+      JWT_SECRET: ${JWT_SECRET:-local-compose-secret-at-least-32-characters}
+      MEDIA_ROOT: /app/sample_data
+      REDIS_URL: redis://redis:6379/0
+    volumes: ["./sample_data:/app/sample_data"]
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    ports: ["3000:3000"]
+    depends_on:
+      api: {condition: service_healthy}
+volumes:
+  postgres_data:
+  redis_data:
