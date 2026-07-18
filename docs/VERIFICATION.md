@@ -1,6 +1,7 @@
 # Verification report
 
 Latest local verification date: 2026-07-19.
+Latest GitHub Actions verification: run `29664824551` on `main` passed backend, frontend, and Docker jobs.
 
 | Check | Command | Result | Evidence / limitation |
 |---|---|---|---|
@@ -14,6 +15,8 @@ Latest local verification date: 2026-07-19.
 | Frontend test | `npm run test` | Passed | Required navigation test |
 | Frontend install | `npm ci`, `npm install`, `corepack pnpm install` | Not completed locally | Package-manager processes repeatedly timed out on this Windows environment and left incomplete `node_modules`; CI remains configured to run clean Linux `npm ci` |
 | Frontend lint/typecheck/build | `npm run lint`, `npm run typecheck`, `npm run build` | Not completed in latest local run | Blocked by incomplete local dependency install; previous verification snapshot in `verification.json` records these as passing |
+| GitHub frontend CI | `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` | Passed | Clean GitHub Actions Linux runner |
+| GitHub Docker CI | `docker compose config`, `docker compose build` | Passed | Clean GitHub Actions Linux runner |
 | PDF API | Backend integration test | Passed | Response starts with `%PDF` |
 | Docker runtime | `docker --version` | Not available | Docker CLI is not installed in this environment |
 | Portfolio previews | `py scripts\render_previews.py` | Not regenerated locally | WeasyPrint import failed because native Pango/GObject libraries are missing on Windows; existing 15 PNG previews are retained |
