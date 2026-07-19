@@ -19,7 +19,17 @@ def test_dashboard_is_persisted_and_coherent(client,headers):
     assert data["planned_progress"]>data["approved_actual_progress"]
     assert data["critical_safety_events"]==1
     assert data["at_risk_activities"] >= 1
-    assert len(data["activity_risk"])==8
+    assert data["public_permit_activities"]==12
+    assert data["dataset_label"]=="NYC DOB Permit Issuance public sample"
+    assert len(data["activity_risk"])==10
+
+
+def test_public_dataset_summary(client,headers):
+    data=client.get("/api/v1/datasets/public-demo?project_id=1",headers=headers).json()
+    assert data["title"]=="DOB Permit Issuance"
+    assert data["publisher"]=="New York City Department of Buildings (DOB)"
+    assert data["records"]==12
+    assert all(x.startswith("NYC-DOB-") for x in data["activity_ids"])
 
 
 def test_organization_isolation(client,headers):
@@ -49,6 +59,7 @@ def test_schedule_graph_and_critical_path(client,headers):
     assert cp[0]=="A100" and "A130" in cp
     activities=client.get("/api/v1/schedule/activities?project_id=1",headers=headers).json()
     assert any(a["status"]=="blocked" for a in activities)
+    assert any(a["external_id"].startswith("NYC-DOB-") for a in activities)
 
 
 def test_video_job_contains_decoded_frames(client,headers):

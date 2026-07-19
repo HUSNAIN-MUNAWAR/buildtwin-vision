@@ -4,14 +4,17 @@
   "backend": {
     "compile": "passed",
     "ruff": "passed",
-    "mypy": "passed: 36 source files",
-    "pytest": "passed: 19 tests",
+    "mypy": "passed: 37 source files",
+    "pytest": "passed: 21 tests",
     "alembic": "passed: 20260719_0001 head",
-    "smoke_api": "passed: health, projects, dashboard, schedule, risk"
+    "smoke_api": "passed: health, projects, dashboard, schedule, risk",
+    "public_dataset_download": "passed: 12 processed NYC DOB Permit Issuance records"
   },
   "seed": {
     "ifc_elements": 12,
-    "schedule_activities": 8,
+    "schedule_activities": 20,
+    "public_dataset": "NYC DOB Permit Issuance",
+    "public_permit_records": 12,
     "decoded_video_frames": 72,
     "sampled_video_frames": 6,
     "changed_area_percent": 12.956,
@@ -20,21 +23,21 @@
     "pdf_report": "sample_data/reports/northstar_weekly_progress.pdf"
   },
   "frontend": {
-    "install": "not completed locally: npm ci/npm install/corepack pnpm install timed out in this Windows environment",
-    "typescript": "not completed in latest local run: blocked by incomplete node_modules",
+    "install": "not completed locally: npm ci timed out after 5 minutes in this Windows environment",
+    "typescript": "not completed locally: tsc unavailable because node_modules install did not complete",
     "test": "passed",
-    "eslint": "not completed in latest local run: blocked by incomplete node_modules",
-    "production_build": "not completed in latest local run: blocked by incomplete node_modules",
+    "eslint": "not completed locally: eslint unavailable because node_modules install did not complete",
+    "production_build": "not completed locally: next unavailable because node_modules install did not complete",
     "next_version": "16.2.10",
-    "github_actions": "passed in run 29664824551: npm ci, lint, typecheck, test, build"
+    "github_actions": "pending for public-dataset commit; previous main run 29664869649 passed npm ci, lint, typecheck, test, build"
   },
   "infrastructure": {
     "compose_yaml": "configured",
     "docker_runtime": "not executed locally: Docker CLI unavailable",
-    "github_actions_docker": "passed in run 29664824551: docker compose config and docker compose build"
+    "github_actions_docker": "pending for public-dataset commit; previous main run 29664869649 passed docker compose config and docker compose build"
   },
   "screenshots": {
-    "count": 15,
-    "method": "existing authenticated seeded API previews retained; local regeneration blocked by missing WeasyPrint native Pango/GObject libraries"
+    "count": 16,
+    "method": "regenerated with scripts/render_previews.py from authenticated FastAPI seeded data, generated evidence, and the public DOB permit sample"
   }
 }

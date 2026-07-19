@@ -16,6 +16,7 @@ from app.models.entities import *
 from app.reports.pdf import create_progress_report
 from app.risk.model import calculate_delay_risk
 from app.services.dashboard import executive_dashboard
+from app.services.public_dataset import public_permit_schedule_rows, read_public_permits
 from app.vision.change_detection import compare_images
 from app.vision.video_reader import process_video
 
@@ -85,21 +86,23 @@ def reset_database(db: Session) -> None:
 def seed_database(db: Session, reset: bool=True) -> dict:
     if reset: reset_database(db)
     assets=generate_assets()
+    public_permits=read_public_permits(settings.media_root/"public"/"nyc_dob_permit_sample.csv")
+    public_rows=public_permit_schedule_rows(public_permits)
     org=Organization(name="Northstar Construction Group"); db.add(org); db.flush()
     admin=User(organization_id=org.id,email="admin@buildtwin.local",full_name="Ayesha Khan",password_hash=hash_password("BuildTwin123!"),role=Role.ADMIN.value)
     reviewer=User(organization_id=org.id,email="reviewer@buildtwin.local",full_name="Omar Siddiqui",password_hash=hash_password("BuildTwin123!"),role=Role.REVIEWER.value)
     safety_user=User(organization_id=org.id,email="safety@buildtwin.local",full_name="Sara Malik",password_hash=hash_password("BuildTwin123!"),role=Role.SAFETY.value); db.add_all([admin,reviewer,safety_user]); db.flush()
-    project=Project(organization_id=org.id,name="Northstar Medical Center Expansion",code="NSMC-26",location="Islamabad Demonstration Site",start_date=date(2026,5,1),finish_date=date(2027,8,30)); db.add(project); db.flush()
+    project=Project(organization_id=org.id,name="BuildTwin Public Construction Demo",code="BT-PUBLIC-26",location="Synthetic site model with NYC DOB public permit sample",start_date=date(2026,5,1),finish_date=date(2027,8,30)); db.add(project); db.flush()
     b1=Building(organization_id=org.id,project_id=project.id,name="Main Clinical Building"); b2=Building(organization_id=org.id,project_id=project.id,name="Parking Structure"); b3=Building(organization_id=org.id,project_id=project.id,name="Utility Block"); db.add_all([b1,b2,b3]); db.flush()
     floor_names=[("Basement",-4.0),("Ground Floor",0),("Level 1",4.2),("Level 2",8.4),("Roof",12.6)]
     floors={}
     for name,elev in floor_names:
       f=Floor(organization_id=org.id,building_id=b1.id,name=name,elevation_m=elev); db.add(f); db.flush(); floors[name]=f
-    zonespec=[("Ground Floor East Wing","Ground Floor",[[0,0],[960,0],[960,540],[0,540]],False),("Ground Floor West Wing","Ground Floor",[[0,0],[480,0],[480,540],[0,540]],False),("Level 1 Core","Level 1",[[100,80],[540,80],[540,480],[100,480]],True),("Level 1 Patient Rooms","Level 1",[[540,80],[950,80],[950,500],[540,500]],False),("Roof Mechanical Zone","Roof",[[100,100],[850,100],[850,500],[100,500]],True),("Parking Deck Zone A",None,[[0,0],[900,0],[900,500],[0,500]],False),("Utility Trench",None,[[0,250],[960,250],[960,540],[0,540]],True)]
+    zonespec=[("Ground Floor East Wing","Ground Floor",[[0,0],[960,0],[960,540],[0,540]],False),("Ground Floor West Wing","Ground Floor",[[0,0],[480,0],[480,540],[0,540]],False),("Level 1 Core","Level 1",[[100,80],[540,80],[540,480],[100,480]],True),("Level 1 Patient Rooms","Level 1",[[540,80],[950,80],[950,500],[540,500]],False),("Roof Mechanical Zone","Roof",[[100,100],[850,100],[850,500],[100,500]],True),("Parking Deck Zone A",None,[[0,0],[900,0],[900,500],[0,500]],False),("Utility Trench",None,[[0,250],[960,250],[960,540],[0,540]],True),("NYC Public Permit Sample",None,[[40,40],[920,40],[920,500],[40,500]],False)]
     zones={}
     for name,fname,poly,restricted in zonespec:
       z=Zone(organization_id=org.id,project_id=project.id,floor_id=floors[fname].id if fname else None,name=name,polygon=poly,restricted=restricted,stale_after_hours=48 if name=="Roof Mechanical Zone" else 72); db.add(z); db.flush(); zones[name]=z
-    wp_names=["Earthworks","Foundations","Structural Concrete","Steel","Masonry","Mechanical","Electrical","Plumbing","Façade","Interior Fit-Out","Roofing","External Works"]
+    wp_names=["Earthworks","Foundations","Structural Concrete","Steel","Masonry","Mechanical","Electrical","Plumbing","Façade","Interior Fit-Out","Roofing","External Works","General Construction","Alteration","Equipment"]
     wps={}
     for name in wp_names:
       w=WorkPackage(organization_id=org.id,project_id=project.id,name=name,discipline=name); db.add(w); db.flush(); wps[name]=w
@@ -116,6 +119,9 @@ def seed_database(db: Session, reset: bool=True) -> dict:
     schedule_rows=load_schedule(assets["schedule"]); acts={}
     for row in schedule_rows:
       a=Activity(organization_id=org.id,project_id=project.id,external_id=row["activity_id"],name=row["name"],work_package_id=wps[row["work_package"]].id,zone_id=zones[row["zone"]].id,planned_start=row["planned_start"],planned_finish=row["planned_finish"],planned_progress=row["planned_progress"],approved_progress=row["actual_progress"],ai_progress=max(0,min(100,row["actual_progress"]+(3 if row["activity_id"] in {"A120","A140"} else 0))),status="blocked" if row["activity_id"]=="A150" else "delayed" if row["actual_progress"]+8<row["planned_progress"] else "in_progress" if row["actual_progress"]<100 else "complete",critical=row["critical"],contractor=row["contractor"]); db.add(a); db.flush(); acts[a.external_id]=a
+    for row in public_rows:
+      status="delayed" if row["actual_progress"]+8<row["planned_progress"] else "in_progress" if row["actual_progress"]<100 else "complete"
+      a=Activity(organization_id=org.id,project_id=project.id,external_id=row["activity_id"],name=row["name"],work_package_id=wps[row["work_package"]].id,zone_id=zones[row["zone"]].id,planned_start=row["planned_start"],planned_finish=row["planned_finish"],planned_progress=row["planned_progress"],approved_progress=row["actual_progress"],ai_progress=row["actual_progress"],status=status,critical=row["critical"],contractor=row["contractor"]); db.add(a); db.flush(); acts[a.external_id]=a
     for row in schedule_rows:
       for pred in row["predecessors"]: db.add(ScheduleDependency(organization_id=org.id,project_id=project.id,predecessor_id=acts[pred].id,successor_id=acts[row["activity_id"]].id))
     for be in bim:
@@ -134,13 +140,15 @@ def seed_database(db: Session, reset: bool=True) -> dict:
     quality1=QualityObservation(organization_id=org.id,project_id=project.id,zone_id=zones["Ground Floor East Wing"].id,activity_id=acts["A110"].id,candidate_type="surface_anomaly_candidate",severity="medium",confidence=.72,status="open",evidence_path=change.overlay_path,corrective_action="Inspect slab surface and record closure evidence",due_date=date.today()+timedelta(days=2))
     quality2=QualityObservation(organization_id=org.id,project_id=project.id,zone_id=zones["Level 1 Patient Rooms"].id,activity_id=acts["A140"].id,candidate_type="crack_like_line_candidate",severity="low",confidence=.36,status="rejected",evidence_path=assets["current"],reviewer_notes="Rejected: formwork edge, not a defect"); db.add_all([safety,quality1,quality2]); db.flush()
     db.add_all([Alert(organization_id=org.id,project_id=project.id,alert_type="critical_delay_risk",severity="critical",title="Level 1 Core Columns require recovery review",message="Critical activity is materially behind plan and blocks core beam work.",entity_type="activity",entity_id=acts["A120"].id),Alert(organization_id=org.id,project_id=project.id,alert_type="restricted_zone_intrusion",severity="high",title="Restricted-zone entry detected",message="Person track 7 entered Level 1 Core during a controlled work window.",entity_type="safety_event",entity_id=safety.id),Alert(organization_id=org.id,project_id=project.id,alert_type="camera_offline",severity="medium",title="Roof camera offline",message="Roof Cam 02 has not reported for more than 72 hours.",entity_type="camera",entity_id=cam2.id),Alert(organization_id=org.id,project_id=project.id,alert_type="stale_progress_evidence",severity="medium",title="Roof Mechanical Zone evidence is stale",message="No accepted visual evidence exists within the configured freshness window.",entity_type="zone",entity_id=zones["Roof Mechanical Zone"].id)])
+    delayed_public=max(public_rows,key=lambda row: row["planned_progress"]-row["actual_progress"])
+    db.add(Alert(organization_id=org.id,project_id=project.id,alert_type="public_dataset_variance",severity="medium",title="NYC DOB public permit sample shows schedule variance",message=f"{delayed_public['activity_id']} is date-shifted from a public DOB permit record and is behind the demo baseline.",entity_type="activity",entity_id=acts[delayed_public["activity_id"]].id))
     db.flush()
     dep_by_succ={a.id:0 for a in acts.values()}
     for dep in db.scalars(select(ScheduleDependency).where(ScheduleDependency.project_id==project.id)).all():
       pred=db.get(Activity,dep.predecessor_id)
       if pred and pred.approved_progress+5<pred.planned_progress: dep_by_succ[dep.successor_id]+=1
     for a in acts.values():
-      risk=calculate_delay_risk(planned_progress=a.planned_progress,actual_progress=a.approved_progress,critical=a.critical,planned_finish=a.planned_finish,delayed_predecessors=dep_by_succ[a.id],evidence_age_hours=96 if a.external_id=="A150" else 8,safety_events=1 if a.zone_id==zones["Level 1 Core"].id else 0,quality_issues=1 if a.external_id=="A110" else 0)
+      risk=calculate_delay_risk(planned_progress=a.planned_progress,actual_progress=a.approved_progress,critical=a.critical,planned_finish=a.planned_finish,delayed_predecessors=dep_by_succ[a.id],evidence_age_hours=24 if a.external_id.startswith("NYC-DOB-") else 96 if a.external_id=="A150" else 8,safety_events=1 if a.zone_id==zones["Level 1 Core"].id else 0,quality_issues=1 if a.external_id=="A110" else 0)
       a.risk_score=risk["score"]; db.add(RiskAssessment(organization_id=org.id,project_id=project.id,activity_id=a.id,score=risk["score"],band=risk["band"],factors=risk["factors"],recommendation=risk["recommendation"],model_version=risk["model_version"]))
     db.add_all([AuditEvent(organization_id=org.id,project_id=project.id,actor_id=reviewer.id,action="progress_observation.approved",entity_type="progress_observation",entity_id=obs1.id,before_values={"review_status":"pending","approved_progress":62},after_values={"review_status":"approved","approved_progress":65},correlation_id="seed-review-001"),AuditEvent(organization_id=org.id,project_id=project.id,actor_id=admin.id,action="bim_model.ingested",entity_type="bim_model",entity_id=model.id,after_values={"element_count":len(bim),"failure_count":len(failures)},correlation_id="seed-bim-001")])
     db.commit()
@@ -153,4 +161,4 @@ def seed_database(db: Session, reset: bool=True) -> dict:
     report_path=str(settings.media_root/"reports"/"northstar_weekly_progress.pdf")
     create_progress_report(report_path,{"name":project.name,"code":project.code,"location":project.location},{k:dash[k] for k in ["planned_progress","approved_actual_progress","ai_estimated_progress","schedule_variance","delayed_activities","at_risk_activities","critical_safety_events","open_quality_observations"]},risks,alert_rows)
     report=Report(organization_id=org.id,project_id=project.id,report_type="weekly_progress",path=report_path,parameters={"seeded":True}); db.add(report); db.commit()
-    return {"organization_id":org.id,"project_id":project.id,"admin_email":admin.email,"password":"BuildTwin123!","elements":len(bim),"activities":len(acts),"video_frames":vm.decoded_frames,"change_percent":change.changed_area_percent,"report":report_path}
+    return {"organization_id":org.id,"project_id":project.id,"admin_email":admin.email,"password":"BuildTwin123!","elements":len(bim),"activities":len(acts),"public_dataset":"NYC DOB Permit Issuance","public_permit_records":len(public_rows),"video_frames":vm.decoded_frames,"change_percent":change.changed_area_percent,"report":report_path}

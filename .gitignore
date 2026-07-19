@@ -17,6 +17,7 @@ frontend/pnpm-lock.yaml
 coverage/
 .DS_Store
 sample_data/uploads/
+sample_data/public/raw/
 sample_data/outputs/test_video/
 sample_data/outputs/job_*/
 api-server.*.log

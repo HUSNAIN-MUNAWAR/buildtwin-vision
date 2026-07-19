@@ -18,6 +18,7 @@ def executive_dashboard(db: Session, org_id: int, project_id: int) -> dict:
         ai=sum(a.ai_progress for a in activities)/len(activities)
     delayed=sum(1 for a in activities if a.approved_progress+5<a.planned_progress)
     at_risk=sum(1 for a in activities if a.risk_score>=40)
+    public_permit_activities=sum(1 for a in activities if a.external_id.startswith("NYC-DOB-"))
     critical_safety=db.scalar(select(func.count()).select_from(SafetyEvent).where(SafetyEvent.organization_id==org_id,SafetyEvent.project_id==project_id,SafetyEvent.status!="resolved",SafetyEvent.severity.in_(["high","critical"]))) or 0
     open_quality=db.scalar(select(func.count()).select_from(QualityObservation).where(QualityObservation.organization_id==org_id,QualityObservation.project_id==project_id,QualityObservation.status.notin_(["closed","rejected"]))) or 0
     cameras=db.scalars(select(Camera).where(Camera.organization_id==org_id,Camera.project_id==project_id)).all()
@@ -28,6 +29,8 @@ def executive_dashboard(db: Session, org_id: int, project_id: int) -> dict:
       "project_id":project_id,
       "planned_progress":round(planned,1),"approved_actual_progress":round(approved,1),"ai_estimated_progress":round(ai,1),
       "schedule_variance":round(approved-planned,1),"delayed_activities":delayed,"at_risk_activities":at_risk,
+      "public_permit_activities":public_permit_activities,
+      "dataset_label":"NYC DOB Permit Issuance public sample" if public_permit_activities else "",
       "critical_safety_events":critical_safety,"open_quality_observations":open_quality,
       "active_cameras":sum(c.status=="online" for c in cameras),"stale_cameras":sum(c.status!="online" for c in cameras),
       "evidence_freshness_hours":round(freshness,1) if freshness is not None else None,

@@ -10,6 +10,7 @@ from app.bim.ifc_parser import parse_ifc
 from app.core.config import settings
 from app.risk.model import calculate_delay_risk
 from app.schedule.engine import load_schedule
+from app.services.public_dataset import public_permit_schedule_rows, read_public_permits
 from app.vision.change_detection import compare_images
 from app.vision.video_reader import process_video
 from app.vision.zone_geometry import box_centroid_inside, validate_polygon
@@ -44,6 +45,16 @@ def test_change_detection_calculation(tmp_path):
 def test_real_video_decoding():
     result=process_video(str(settings.media_root/"videos"/"level1_progress.mp4"),str(settings.media_root/"outputs"/"test_video"),sample_every=18,max_frames=72)
     assert result.decoded_frames==72 and result.sampled_frames==4
+
+
+def test_public_dataset_maps_to_schedule_rows():
+    permits=read_public_permits(settings.media_root/"public"/"nyc_dob_permit_sample.csv")
+    rows=public_permit_schedule_rows(permits)
+    assert len(rows)==12
+    assert rows[0]["activity_id"].startswith("NYC-DOB-")
+    assert rows[0]["zone"]=="NYC Public Permit Sample"
+    assert all(0 <= row["actual_progress"] <= row["planned_progress"] <= 100 for row in rows)
+    assert {row["work_package"] for row in rows} <= {"Alteration","Equipment","Plumbing","General Construction"}
 
 
 def test_risk_monotonicity():

@@ -9,7 +9,7 @@
 
 **Evidence-first 4D construction intelligence for BIM-linked progress tracking, visual verification, safety/quality review, delay-risk forecasting, and auditable reporting.**
 
-BuildTwin Vision is a runnable full-stack construction-operations system. It connects a seeded project hierarchy, IFC elements, schedule activities and dependencies, OpenCV image/video processing, progress review, safety and quality exceptions, explainable risk, alerts, audit history, and PDF reporting.
+BuildTwin Vision is a runnable full-stack construction-operations system. It connects a seeded project hierarchy, IFC elements, schedule activities and dependencies, a public NYC DOB permit sample, OpenCV image/video processing, progress review, safety and quality exceptions, explainable risk, alerts, audit history, and PDF reporting.
 
 The project is production-style open-source software, not a claim of turnkey enterprise readiness. Demo data is clearly labeled and generated locally.
 
@@ -51,7 +51,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system, container, media-pr
 
 ## Screenshots
 
-The included screenshots are generated from the authenticated Northstar demo API data and generated evidence files. They are stored in [screenshots/](screenshots/) and intentionally avoid secrets, tokens, private paths, or real customer data.
+The included screenshots are generated from authenticated seeded API data, the processed public permit sample, and generated evidence files by running `python scripts/render_previews.py`. They are stored in [screenshots/](screenshots/) and intentionally avoid secrets, tokens, private paths, or real customer data.
 
 | Command center | 4D schedule |
 |---|---|
@@ -65,17 +65,32 @@ The included screenshots are generated from the authenticated Northstar demo API
 |---|---|
 | ![Progress review](screenshots/progress-review.png) | ![Change analysis](screenshots/change-analysis.png) |
 
-Additional screenshots: [landing](screenshots/landing.png), [login](screenshots/login.png), [captures/cameras](screenshots/cameras.png), [safety](screenshots/safety.png), [quality](screenshots/quality.png), [reports](screenshots/reports.png), [alerts](screenshots/alerts.png), and [audit](screenshots/audit.png).
+Additional screenshots: [landing](screenshots/landing.png), [login](screenshots/login.png), [captures](screenshots/captures.png), [cameras](screenshots/cameras.png), [safety](screenshots/safety.png), [quality](screenshots/quality.png), [reports](screenshots/reports.png), [alerts](screenshots/alerts.png), and [audit](screenshots/audit.png).
 
 ## Demo Data
 
-The seeded **Northstar Medical Center Expansion** demo includes:
+The seeded **BuildTwin Public Construction Demo** includes:
 
 - 3 buildings, 5 floors, 7 physical zones, and 12 work packages.
 - 12 parsed IFC records from a generated minimal IFC STEP file.
 - 8 schedule activities with finish-to-start dependencies.
+- 12 mapped public activities from New York City's DOB Permit Issuance dataset, for 20 schedule activities total.
 - Demo images, MP4 video, sampled frames, a change overlay/mask, and a generated PDF report.
 - One delayed critical activity, one blocked downstream workfront, one restricted-zone event, one offline camera, one low-confidence observation, one approved observation, one rejected quality candidate, one open corrective action, one completed processing job, and one failed job with a realistic validation reason.
+
+## Public Dataset Demo
+
+BuildTwin Vision includes a small processed sample from New York City's **DOB Permit Issuance** dataset, published by the New York City Department of Buildings (DOB) on NYC Open Data. The official dataset page is https://data.cityofnewyork.us/Housing-Development/DOB-Permit-Issuance/ipu4-2q9a and NYC Open Data terms are documented at https://opendata.cityofnewyork.us/overview/#termsofuse.
+
+The repository commits `sample_data/public/nyc_dob_permit_sample.csv`, a 12-record subset filtered to issued Manhattan permits with usable lifecycle dates. The raw JSON download cache is written to `sample_data/public/raw/` and ignored by Git. Regenerate the sample with:
+
+```bash
+python scripts/download_public_dataset.py
+```
+
+During `python -m app.cli reset-seed`, the importer validates the CSV, maps permit/work types into BuildTwin work packages, date-shifts records into a fixed July 2026 demo window, creates stable `NYC-DOB-*` activity IDs, and exposes a dataset summary at `/api/v1/datasets/public-demo?project_id=1`.
+
+See [docs/DATASET.md](docs/DATASET.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution, fields used, fields omitted, transformations, limitations, and reproduction notes.
 
 ## Technology Stack
 
@@ -223,10 +238,11 @@ backend/tests/     API, engine, integration, and workflow tests
 frontend/src/      Next.js operations interface
 frontend/tests/    Navigation smoke tests
 sample_data/       Demo IFC, schedule, images, MP4, processing output, PDF
+sample_data/public Processed public NYC DOB permit sample and ignored raw cache
 infra/             Docker, Nginx, and monitoring adapters
 docs/              Architecture, API, deployment, demo, security, testing, roadmap
 screenshots/       Demo application evidence previews
-scripts/           Smoke test, demo generation, and preview rendering helpers
+scripts/           Smoke test, public-data download, demo generation, and preview rendering helpers
 ```
 
 ## Security Notes
@@ -258,8 +274,8 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), keep 
 
 ## License
 
-BuildTwin Vision is released under the [MIT License](LICENSE).
+BuildTwin Vision is released under the [MIT License](LICENSE). Third-party public-data attribution is listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Attribution
 
-This project uses open-source Python and JavaScript libraries listed in [backend/pyproject.toml](backend/pyproject.toml) and [frontend/package.json](frontend/package.json). Demo data, images, videos, IFC records, and reports are generated for this repository and are not copied from real customers or unrelated products.
+This project uses open-source Python and JavaScript libraries listed in [backend/pyproject.toml](backend/pyproject.toml) and [frontend/package.json](frontend/package.json). Demo images, videos, IFC records, and reports are generated for this repository and are not copied from real customers or unrelated products. The public construction dataset sample is attributed separately in [docs/DATASET.md](docs/DATASET.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

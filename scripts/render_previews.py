@@ -1,71 +1,264 @@
+from __future__ import annotations
+
+import json
+import sys
+import textwrap
 from pathlib import Path
-import html, json, subprocess, requests
-from weasyprint import HTML
+from typing import Any
 
-BASE='http://127.0.0.1:8000/api/v1'
 ROOT = Path(__file__).resolve().parents[1]
-out = ROOT / 'screenshots'
-out.mkdir(parents=True, exist_ok=True)
-s=requests.Session(); tok=s.post(BASE+'/auth/login',json={'email':'admin@buildtwin.local','password':'BuildTwin123!'}).json()['access_token']; s.headers['Authorization']='Bearer '+tok
+sys.path.insert(0, str(ROOT / "backend"))
 
-def get(path): return s.get(BASE+path).json()
-D=get('/dashboard/executive?project_id=1'); zones=get('/dashboard/progress?project_id=1'); acts=get('/schedule/activities?project_id=1'); models=get('/bim/models?project_id=1'); model=next(x for x in models if x['status']=='completed'); elems=get(f"/bim/models/{model['id']}/elements"); obs=get('/progress/observations?project_id=1'); changes=get('/changes?project_id=1'); safety=get('/safety/events?project_id=1'); quality=get('/quality/observations?project_id=1'); risks=get('/risk/activities?project_id=1'); reports=get('/reports?project_id=1'); cams=get('/cameras?project_id=1'); alerts=get('/alerts?project_id=1'); audit=get('/audit?project_id=1')
+from fastapi.testclient import TestClient
+from PIL import Image, ImageDraw, ImageFont
 
-CSS='''@page{size:1440px 900px;margin:0}*{box-sizing:border-box}body{margin:0;background:#091017;color:#eaf0f5;font-family:Arial,Helvetica,sans-serif;font-size:13px}.shell{height:900px;display:grid;grid-template-columns:245px 1fr}.side{background:#0b131b;border-right:1px solid #24313c;padding:22px 16px}.brand{font-size:20px;font-weight:800;margin-bottom:24px}.mark{display:inline-block;background:#f6a821;color:#171109;padding:10px;border-radius:9px;margin-right:10px;font-size:12px}.project{background:#111d27;border:1px solid #263744;padding:15px;border-radius:10px;margin-bottom:18px}.project small,.eyebrow{display:block;color:#f6b642;font-size:9px;letter-spacing:1.4px;font-weight:800}.project b{display:block;margin:7px 0;font-size:12px}.nav{padding:8px 10px;margin:3px 0;color:#91a5b3;border-radius:7px}.nav.active{background:#17232d;color:#fff;border-left:2px solid #f6a821}.work{padding:0 28px 30px}.top{height:112px;border-bottom:1px solid #24313c;display:flex;justify-content:space-between;align-items:center}.top h1{margin:6px 0 4px;font-size:28px}.top p{color:#8fa1af;margin:0}.live{border:1px solid #2d423d;border-radius:20px;padding:9px 12px;color:#73d7a8}.body{padding-top:20px}.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:11px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.card,.panel{background:#101922;border:1px solid #263645;border-radius:12px}.card{padding:17px;min-height:105px}.card span{color:#8fa1af;font-size:9px;text-transform:uppercase}.card strong{display:block;font-size:25px;margin:10px 0 4px}.card small{color:#8fa1af}.panel{padding:18px;margin-top:14px}.panel h2{font-size:16px;margin:5px 0 12px}.row{display:grid;grid-template-columns:1.5fr 1.1fr .55fr .5fr;gap:14px;align-items:center;padding:11px 5px;border-top:1px solid #23323d}.row.head{color:#8295a2;font-size:9px;text-transform:uppercase}.row b{font-size:11px}.row small{display:block;color:#8fa1af;font-size:9px;margin-top:4px}.bar{height:6px;background:#263642;border-radius:10px;position:relative;margin:6px 0}.bar i{display:block;height:6px;background:#5da7ff;border-radius:10px}.bar em{position:absolute;top:-3px;width:2px;height:12px;background:#f6a821}.status{display:inline-block;border:1px solid #40515e;border-radius:20px;padding:4px 7px;font-size:8px;text-transform:uppercase;color:#b3c0c8}.high,.critical,.delayed,.offline,.rejected{color:#ff9ba5;border-color:#704048;background:#2d2024}.medium,.pending,.restricted{color:#ffcd72;border-color:#69542e;background:#2d281c}.low,.approved,.complete,.completed,.online,.accepted{color:#7de3b5;border-color:#2b5c48;background:#182c25}.risk{font-size:18px;font-weight:800;color:#f6b642}.tile{background:#14212b;border:1px solid #263744;border-radius:10px;padding:13px}.tile header{display:flex;justify-content:space-between;gap:10px}.tile p{color:#8fa1af;font-size:10px;line-height:1.45}.tags span{display:inline-block;margin:4px 4px 0 0;background:#1b2a35;border-radius:12px;padding:4px 7px;font-size:8px;color:#a9b7c0}.evidence{width:100%;height:180px;object-fit:cover;border-radius:8px;background:#071018}.list .item{display:grid;grid-template-columns:55px 1fr 130px;gap:12px;padding:12px;border-top:1px solid #253440;align-items:center}.icon{width:42px;height:42px;border-radius:9px;background:#1d2c37;display:grid;place-items:center;color:#f6a821;font-weight:800}.factor{display:grid;grid-template-columns:1fr 50px;background:#14212b;border-radius:7px;padding:9px;margin:5px 0}.factor small{color:#8fa1af}.factor b{text-align:right;color:#f6a821}.hero{height:900px;padding:45px 80px;background:radial-gradient(circle at 80% 10%,#2c2518,transparent 32%),#091017}.hero h1{font-size:78px;line-height:.97;max-width:930px;margin:120px 0 30px;letter-spacing:-4px}.hero p{font-size:20px;line-height:1.6;color:#a9b8c3;max-width:780px}.stats{display:grid;grid-template-columns:repeat(4,1fr);width:760px;margin-top:70px;border:1px solid #263645;border-radius:12px}.stats div{padding:22px;border-right:1px solid #263645}.stats b{display:block;font-size:27px}.stats small{color:#8fa1af}.login{height:900px;display:grid;place-items:center;background:radial-gradient(circle at 18% 20%,#282117,transparent 28%),#091017}.loginbox{width:460px;background:#101922;border:1px solid #263645;border-radius:16px;padding:42px}.loginbox h1{font-size:38px;margin:12px 0}.input{background:#091119;border:1px solid #30414e;padding:14px;border-radius:8px;margin:9px 0;color:#b7c2ca}.button{background:#f6a821;color:#17110a;border-radius:8px;text-align:center;padding:14px;margin-top:18px;font-weight:800}.note{background:#14212a;border:1px dashed #40515d;padding:14px;border-radius:8px;margin-top:18px;color:#9bacb7}.alertline{display:grid;grid-template-columns:80px 1fr;gap:12px;padding:12px;border-top:1px solid #253440}.audit{display:grid;grid-template-columns:.7fr 1.2fr .8fr 1.6fr .8fr;gap:10px;padding:10px 4px;border-top:1px solid #263744;font-size:9px;color:#9aabb6}.audit.head{text-transform:uppercase;color:#748793}.code{background:#0a1219;padding:5px;border-radius:4px;white-space:nowrap;overflow:hidden}.footnote{color:#6f8391;font-size:8px;margin-top:10px}'''
-NAV=['Command Center','Digital Twin','4D Schedule','Site Captures','Progress Review','Change Analysis','Safety','Quality','Risk Forecast','Reports','Cameras','Alerts','Audit Log']
+from app.core.config import settings
+from app.main import app
 
-def esc(x): return html.escape(str(x))
-def status(x): return f'<span class="status {esc(str(x).lower().replace(" ","-"))}">{esc(str(x).replace("_"," "))}</span>'
-def bar(actual,planned=0): return f'<div class="bar"><i style="width:{max(0,min(100,float(actual)))}%"></i><em style="left:{max(0,min(100,float(planned)))}%"></em></div>'
-def shell(title,subtitle,content,active):
- nav=''.join(f'<div class="nav {"active" if n==active else ""}">{n}</div>' for n in NAV)
- return f'<html><head><style>{CSS}</style></head><body><div class="shell"><aside class="side"><div class="brand"><span class="mark">BT</span>BuildTwin <b>Vision</b></div><div class="project"><small>ACTIVE PROJECT</small><b>Northstar Medical Center</b><span>NSMC-26 · Islamabad</span></div>{nav}</aside><main class="work"><header class="top"><div><span class="eyebrow">NORTHSTAR / LIVE OPERATIONS</span><h1>{esc(title)}</h1><p>{esc(subtitle)}</p></div><div class="live">● API connected</div></header><section class="body">{content}</section></main></div></body></html>'
+OUT = ROOT / "screenshots"
+OUT.mkdir(parents=True, exist_ok=True)
+W, H = 1440, 900
+BG = "#091017"
+PANEL = "#101922"
+PANEL2 = "#14212b"
+LINE = "#263645"
+TEXT = "#eaf0f5"
+MUTED = "#8fa1af"
+ACCENT = "#f6a821"
+GREEN = "#65d7a7"
+RED = "#ff7d89"
+BLUE = "#5da7ff"
 
-def render(name,markup):
- pdf=out/(name+'.pdf'); HTML(string=markup, base_url=str(ROOT)).write_pdf(pdf)
- subprocess.run(['pdftoppm','-png','-f','1','-singlefile','-r','96',str(pdf),str(out/name)],check=True,stdout=subprocess.DEVNULL)
- pdf.unlink()
+FONT = ImageFont.load_default()
 
-render('landing',f'<html><head><style>{CSS}</style></head><body><div class="hero"><div class="brand"><span class="mark">BT</span>BuildTwin <b>Vision</b></div><span class="eyebrow" style="margin-top:105px">AUTONOMOUS 4D CONSTRUCTION INTELLIGENCE</span><h1>Turn site evidence into an auditable construction digital twin.</h1><p>BuildTwin Vision connects IFC elements, project schedules, visual captures, change analysis, progress approvals, safety events, quality candidates, and delay risk in one operational system.</p><div class="stats"><div><b>12</b><small>IFC entities</small></div><div><b>72</b><small>decoded frames</small></div><div><b>8</b><small>linked activities</small></div><div><b>100%</b><small>traceability</small></div></div></div></body></html>')
-render('login',f'<html><head><style>{CSS}</style></head><body><div class="login"><div class="loginbox"><span class="eyebrow">NORTHSTAR OPERATIONS</span><h1>Enter the 4D command center</h1><p style="color:#8fa1af;line-height:1.5">Authentication and organization scoping are enforced by the API.</p><small>Email</small><div class="input">admin@buildtwin.local</div><small>Password</small><div class="input">•••••••••••••••</div><div class="button">Sign in securely</div><div class="note"><b style="color:#f6b642">Local demo</b><br>admin@buildtwin.local<br>BuildTwin123!</div></div></div></body></html>')
 
-kpis=[('Planned progress',D['planned_progress'],'Schedule baseline to date'),('Approved actual',D['approved_actual_progress'],f"{D['schedule_variance']} pts variance"),('AI estimate',D['ai_estimated_progress'],'Analytical indicator'),('At-risk activities',D['at_risk_activities'],f"{D['delayed_activities']} delayed"),('Safety exceptions',D['critical_safety_events'],'High/critical open'),('Evidence age',D['evidence_freshness_hours'],'hours since latest')]
-khtml='<div class="grid6">'+''.join(f'<div class="card"><span>{a}</span><strong>{b}{"%" if "progress" in a.lower() or "actual" in a.lower() or "estimate" in a.lower() else ""}</strong><small>{c}</small></div>' for a,b,c in kpis)+'</div>'
-rows='<div class="row head"><span>Activity</span><span>Progress</span><span>Variance</span><span>Risk</span></div>'+''.join(f'<div class="row"><span><b>{a["external_id"]} · {esc(a["name"])}</b><small>{esc(a["status"])}</small></span><span>{bar(a["actual"],a["planned"])}<small>{a["actual"]}% approved / {a["planned"]}% plan</small></span><span style="color:#ff8a96">{a["variance"]} pts</span><span class="risk">{a["risk_score"]}</span></div>' for a in D['activity_risk'][:6])
-alerts_html=''.join(f'<div class="alertline">{status(a["severity"])}<div><b>{esc(a["title"])}</b><p style="color:#8fa1af;font-size:10px">{esc(a["message"])}</p></div></div>' for a in D['alerts'][:4])
-content=khtml+f'<div class="grid2"><div class="panel"><span class="eyebrow">4D CONTROL</span><h2>Activity risk and progress</h2>{rows}</div><div class="panel"><span class="eyebrow">EXCEPTIONS</span><h2>Attention feed</h2>{alerts_html}</div></div>'
-render('command-center',shell('Command Center','Planned-versus-actual control, evidence freshness, field risk, and actionable exceptions.',content,'Command Center'))
+client = TestClient(app)
+token = client.post("/api/v1/auth/login", json={"email": "admin@buildtwin.local", "password": "BuildTwin123!"}).json()["access_token"]
+headers = {"Authorization": f"Bearer {token}"}
 
-elem_html='<div class="grid3">'+''.join(f'<div class="tile"><header><b>{esc(e["name"])}</b>{status(e["progress_status"])}</header><p>{esc(e["element_type"])} · {esc(e["ifc_guid"])}</p>{bar(e["progress_percent"])}<div class="tags"><span>{esc(e["floor_name"])}</span><span>{esc(e["material"])}</span><span>{round(e["confidence"]*100)}% confidence</span></div></div>' for e in elems[:9])+'</div>'
-render('digital-twin',shell('Digital Twin','IFC hierarchy, element state, construction context, and verification confidence.',f'<div class="grid3"><div class="card"><span>IFC import</span><strong>{model["element_count"]}</strong><small>supported elements persisted</small></div><div class="card"><span>Parser status</span><strong style="font-size:19px">{model["status"]}</strong><small>{model["failure_count"]} failures</small></div><div class="card"><span>Traceability</span><strong>100%</strong><small>GUIDs preserved</small></div></div><div class="panel"><span class="eyebrow">IFC ELEMENT REGISTER</span><h2>Hierarchical twin explorer</h2>{elem_html}</div>','Digital Twin'))
 
-act_tiles=''.join(f'<div class="tile"><header><div><b>{a["external_id"]}</b> · {esc(a["name"])}</div>{status(a["status"])}</header><p>{a["planned_start"]} → {a["planned_finish"]} · {esc(a["contractor"])}</p>{bar(a["approved_progress"],a["planned_progress"])}<div class="tags"><span>Approved {a["approved_progress"]}%</span><span>AI {a["ai_progress"]}%</span><span>Risk {a["risk_score"]}</span><span>{"Critical" if a["critical"] else "Non-critical"}</span></div></div>' for a in acts)
-render('schedule',shell('4D Schedule','Planned and approved progress, dependencies, criticality, contractors, and risk.',f'<div class="grid2">{act_tiles}</div>','4D Schedule'))
+def get(path: str) -> Any:
+    response = client.get(path, headers=headers)
+    response.raise_for_status()
+    return response.json()
 
-obs_html=''.join(f'<div class="tile"><img class="evidence" src="{BASE.replace("/api/v1","")}{o["evidence_url"]}"><header style="margin-top:10px"><b>{esc(o["external_id"])} · {esc(o["activity"])}</b>{status(o["review_status"])}</header><div class="grid3" style="margin-top:10px"><div><small>Previous</small><b>{o["previous_progress"]}%</b></div><div><small>AI estimate</small><b>{o["estimated_progress"]}%</b></div><div><small>Confidence</small><b>{round(o["confidence"]*100)}%</b></div></div><p>{esc(o["algorithm"])}</p></div>' for o in obs)
-render('progress-review',shell('Progress Review','Human governance for AI-estimated construction progress without destructive overwrites.',f'<div class="grid2">{obs_html}</div>','Progress Review'))
 
-chg=''.join(f'<div class="tile"><img class="evidence" style="height:260px" src="{BASE.replace("/api/v1","")}{x["overlay_url"]}"><header style="margin-top:10px"><b>{x["changed_area_percent"]:.3f}% changed area</b>{status(x["review_status"])}</header><p>Alignment: {esc(x["alignment_status"])} · Confidence {round(x["confidence"]*100)}%</p><p>{esc(x["reviewer_notes"])}</p></div>' for x in changes)
-render('change-analysis',shell('Change Analysis','Aligned before-and-after comparison, change area, confidence, and review state.',f'<div class="grid2">{chg}</div>','Change Analysis'))
+def media_path(url: str) -> Path | None:
+    if not url.startswith("/media-files/"):
+        return None
+    path = settings.media_root / url.removeprefix("/media-files/")
+    return path if path.exists() else None
 
-safe=''.join(f'<div class="tile"><img class="evidence" style="height:250px" src="{BASE.replace("/api/v1","")}{x["evidence_url"]}"><header style="margin-top:10px"><b>{esc(x["event_type"].replace("_"," "))}</b>{status(x["severity"])}</header><p>{esc(x["notes"])}</p><div class="tags"><span>{round(x["confidence"]*100)}% confidence</span><span>Zone #{x["zone_id"]}</span><span>{len(x["detection_boxes"])} track box</span></div></div>' for x in safety)
-render('safety',shell('Safety Operations','Deduplicated rule events with track evidence, zone context, assignment, and resolution state.',f'<div class="grid2">{safe}</div>','Safety'))
 
-qual=''.join(f'<div class="tile"><header><b>{esc(x["candidate_type"].replace("_"," "))}</b>{status(x["status"])}</header><p>{esc(x["corrective_action"] or x["reviewer_notes"])}</p><div class="tags"><span>{esc(x["severity"])}</span><span>{round(x["confidence"]*100)}% confidence</span><span>{"Due "+str(x["due_date"]) if x["due_date"] else "No due date"}</span></div></div>' for x in quality)
-render('quality',shell('Quality Intelligence','Candidate-only observations, corrective actions, due dates, and reviewer outcomes.',f'<div class="grid2">{qual}</div>','Quality'))
+def text(draw: ImageDraw.ImageDraw, xy: tuple[int, int], value: Any, fill: str = TEXT) -> None:
+    draw.text(xy, str(value), fill=fill, font=FONT)
 
-risk_html=''.join(f'<div class="tile" style="display:grid;grid-template-columns:80px 1fr;gap:15px"><div class="risk" style="font-size:35px">{r["score"]}<small style="display:block;color:#8fa1af;font-size:9px">{esc(r["band"])}</small></div><div><header><b>{esc(r["external_id"])} · {esc(r["activity"])}</b>{status(r["band"])}</header>{bar(r["approved_progress"],r["planned_progress"])}'+''.join(f'<div class="factor"><small>{esc(f["reason"])}</small><b>+{f["contribution"]}</b></div>' for f in r['factors'][:3])+f'<p>{esc(r["recommendation"])}</p></div></div>' for r in risks[:6])
-render('risk',shell('Risk Forecast','Transparent delay-risk contributions rather than unexplained black-box scores.',f'<div class="grid2">{risk_html}</div>','Risk Forecast'))
 
-rep=''.join(f'<div class="list"><div class="item"><div class="icon">PDF</div><div><b>{esc(x["report_type"].replace("_"," "))}</b><small>Generated {esc(x["generated_at"])}</small></div>{status("available")}</div></div>' for x in reports)
-render('reports',shell('Reports','Project-data-backed PDF reports with KPIs, risks, alerts, and generation parameters.',f'<div class="panel"><span class="eyebrow">DOCUMENT REGISTER</span><h2>Generated intelligence reports</h2>{rep}</div>','Reports'))
+def wrap(draw: ImageDraw.ImageDraw, xy: tuple[int, int], value: str, width: int, fill: str = MUTED, line_height: int = 17) -> int:
+    y = xy[1]
+    for line in textwrap.wrap(str(value), width=max(12, width // 8)):
+        draw.text((xy[0], y), line, fill=fill, font=FONT)
+        y += line_height
+    return y
 
-camhtml=''.join(f'<div class="tile"><header><b>{esc(c["name"])}</b>{status(c["status"])}</header><p>{esc(c["source_type"])} source · Zone #{c["zone_id"]}</p><p>Last seen {esc(c["last_seen_at"])}</p>' + (('<p style="color:#ff9ba5">' + esc(c["last_error"]) + '</p>') if c["last_error"] else '') + '</div>' for c in cams)
-render('cameras',shell('Camera Health','Source status, last heartbeat, work-zone context, and diagnostic errors.',f'<div class="grid2">{camhtml}</div>','Cameras'))
 
-alert_html=''.join(f'<div class="alertline">{status(a["severity"])}<div><b>{esc(a["title"])}</b><p>{esc(a["message"])}</p><small>{esc(a["entity_type"])} #{a["entity_id"]} · {esc(a["status"])}</small></div></div>' for a in alerts)
-render('alerts',shell('Alerts','Actionable construction exceptions with severity, source entity, and acknowledgement state.',f'<div class="panel">{alert_html}</div>','Alerts'))
+def card(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], title: str, value: Any, detail: str = "", tone: str = LINE) -> None:
+    draw.rounded_rectangle(box, radius=10, fill=PANEL, outline=tone)
+    x, y, _, _ = box
+    text(draw, (x + 16, y + 14), title.upper(), MUTED)
+    text(draw, (x + 16, y + 38), value, TEXT)
+    if detail:
+        wrap(draw, (x + 16, y + 64), detail, box[2] - box[0] - 30)
 
-aud='<div class="audit head"><span>Actor</span><span>Action</span><span>Entity</span><span>After values</span><span>Correlation</span></div>'+''.join(f'<div class="audit"><span>{esc(a["actor"])}</span><span>{esc(a["action"])}</span><span>{esc(a["entity_type"])} #{a["entity_id"]}</span><span class="code">{esc(json.dumps(a["after_values"]))}</span><span>{esc(a["correlation_id"] or "—")}</span></div>' for a in audit[:10])
-render('audit',shell('Audit Log','Traceable actor actions, before/after values, entity references, and correlation IDs.',f'<div class="panel">{aud}</div>','Audit Log'))
-print('rendered',len(list(out.glob('*.png'))),'PNG previews')
+
+def status(draw: ImageDraw.ImageDraw, xy: tuple[int, int], value: str) -> None:
+    color = GREEN if value in {"complete", "completed", "approved", "accepted", "online", "live"} else RED if value in {"critical", "high", "delayed", "blocked", "offline", "rejected"} else ACCENT
+    label = value.replace("_", " ").upper()
+    w = 8 * len(label) + 16
+    draw.rounded_rectangle((xy[0], xy[1], xy[0] + w, xy[1] + 22), radius=11, fill="#17232d", outline=color)
+    text(draw, (xy[0] + 8, xy[1] + 6), label, color)
+
+
+def display_activity_id(value: str) -> str:
+    if not value.startswith("NYC-DOB-"):
+        return value
+    parts = value.split("-")
+    return f"NYC-{parts[2]}-{parts[-1]}" if len(parts) > 4 else value
+
+
+def progress(draw: ImageDraw.ImageDraw, xy: tuple[int, int], actual: float, planned: float = 0, width: int = 180) -> None:
+    x, y = xy
+    draw.rounded_rectangle((x, y, x + width, y + 7), radius=4, fill="#25343f")
+    draw.rounded_rectangle((x, y, x + int(width * min(100, max(0, actual)) / 100), y + 7), radius=4, fill=BLUE)
+    px = x + int(width * min(100, max(0, planned)) / 100)
+    draw.rectangle((px, y - 3, px + 2, y + 10), fill=ACCENT)
+
+
+def shell(title: str, subtitle: str) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+    img = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(img)
+    draw.rectangle((0, 0, 245, H), fill="#0b131b")
+    draw.line((245, 0, 245, H), fill=LINE)
+    draw.rounded_rectangle((24, 22, 62, 60), radius=8, fill=ACCENT)
+    text(draw, (36, 36), "BT", "#17110a")
+    text(draw, (74, 32), "BuildTwin Vision", TEXT)
+    draw.rounded_rectangle((18, 88, 226, 150), radius=10, fill="#111d27", outline=LINE)
+    text(draw, (34, 104), "PUBLIC DATA DEMO", ACCENT)
+    wrap(draw, (34, 126), "NYC DOB permits + local evidence pipeline", 175)
+    nav = ["Command Center", "Digital Twin", "4D Schedule", "Captures", "Progress", "Changes", "Safety", "Quality", "Risk", "Reports", "Cameras", "Alerts", "Audit"]
+    y = 178
+    for item in nav:
+        fill = "#17232d" if item.lower() in title.lower() else "#0b131b"
+        draw.rounded_rectangle((18, y, 226, y + 27), radius=7, fill=fill)
+        text(draw, (34, y + 8), item, TEXT if fill != "#0b131b" else MUTED)
+        y += 31
+    draw.rectangle((245, 0, W, 112), fill="#0b1219")
+    text(draw, (280, 28), "BUILDTWIN / PUBLIC DATA SAMPLE", ACCENT)
+    text(draw, (280, 52), title, TEXT)
+    wrap(draw, (280, 76), subtitle, 850)
+    status(draw, (1250, 42), "live")
+    return img, draw
+
+
+def paste_evidence(img: Image.Image, box: tuple[int, int, int, int], url: str) -> None:
+    path = media_path(url)
+    if not path:
+        ImageDraw.Draw(img).rectangle(box, fill="#071018", outline=LINE)
+        return
+    ev = Image.open(path).convert("RGB")
+    ev.thumbnail((box[2] - box[0], box[3] - box[1]))
+    x = box[0] + ((box[2] - box[0]) - ev.width) // 2
+    y = box[1] + ((box[3] - box[1]) - ev.height) // 2
+    ImageDraw.Draw(img).rectangle(box, fill="#071018", outline=LINE)
+    img.paste(ev, (x, y))
+
+
+def save(name: str, img: Image.Image) -> None:
+    img.save(OUT / f"{name}.png")
+
+
+dashboard = get("/api/v1/dashboard/executive?project_id=1")
+zones = get("/api/v1/dashboard/progress?project_id=1")
+activities = get("/api/v1/schedule/activities?project_id=1")
+risk_rows = get("/api/v1/risk/activities?project_id=1")
+dataset = get("/api/v1/datasets/public-demo?project_id=1")
+
+img, d = shell("Command Center", "Planned-versus-actual control with NYC DOB public permit records mapped into the demo schedule.")
+d.rounded_rectangle((280, 132, 1360, 178), radius=10, fill=PANEL2, outline="#355066")
+text(d, (300, 148), dataset["title"], ACCENT)
+text(d, (455, 148), f"{dataset['records']} public records | planned {dataset['planned_progress']}% | approved {dataset['approved_progress']}%", TEXT)
+kpis = [
+    ("Planned", f"{dashboard['planned_progress']}%", "Baseline"),
+    ("Approved", f"{dashboard['approved_actual_progress']}%", f"{dashboard['schedule_variance']} pts variance"),
+    ("Public permits", dashboard["public_permit_activities"], "NYC DOB sample"),
+    ("At risk", dashboard["at_risk_activities"], f"{dashboard['delayed_activities']} delayed"),
+    ("Safety", dashboard["critical_safety_events"], "open high/critical"),
+    ("Evidence age", f"{dashboard['evidence_freshness_hours']}h", "latest observation"),
+]
+for i, k in enumerate(kpis):
+    card(d, (280 + i * 180, 198, 445 + i * 180, 292), *k)
+y = 330
+for row in dashboard["activity_risk"][:8]:
+    d.line((280, y - 10, 1040, y - 10), fill=LINE)
+    text(d, (290, y), display_activity_id(row["external_id"]), ACCENT)
+    wrap(d, (410, y), row["name"], 290, TEXT)
+    progress(d, (720, y + 6), row["actual"], row["planned"], 170)
+    text(d, (925, y), f"{row['variance']} pts", RED if row["variance"] < 0 else GREEN)
+    text(d, (1010, y), row["risk_score"], ACCENT)
+    y += 54
+y = 330
+for alert in dashboard["alerts"][:5]:
+    status(d, (1080, y), alert["severity"])
+    wrap(d, (1180, y), alert["title"], 160, TEXT)
+    y += 64
+save("command-center", img)
+
+img, d = shell("4D Schedule", "Synthetic site activities plus NYC DOB public permit sample activities.")
+y = 145
+for row in activities[:13]:
+    d.rounded_rectangle((280, y, 1360, y + 48), radius=8, fill=PANEL, outline=LINE)
+    text(d, (295, y + 13), display_activity_id(row["external_id"]), ACCENT)
+    wrap(d, (420, y + 10), row["name"], 430, TEXT)
+    text(d, (885, y + 13), f"{row['planned_start']} -> {row['planned_finish']}", MUTED)
+    progress(d, (1120, y + 18), row["approved_progress"], row["planned_progress"], 170)
+    status(d, (1300, y + 13), row["status"])
+    y += 56
+save("schedule", img)
+
+img, d = shell("Risk Forecast", "Heuristic delay-risk contributions for public permit sample and local site workflow.")
+y = 145
+for row in risk_rows[:8]:
+    d.rounded_rectangle((280, y, 1360, y + 78), radius=8, fill=PANEL, outline=LINE)
+    text(d, (300, y + 16), row["score"], ACCENT)
+    text(d, (300, y + 38), row["band"], MUTED)
+    text(d, (380, y + 14), f"{row['external_id']} - {row['activity']}", TEXT)
+    factors = "; ".join(f"{f['name']} +{f['contribution']}" for f in row["factors"][:3])
+    wrap(d, (380, y + 36), factors, 650)
+    wrap(d, (990, y + 18), row["recommendation"], 330)
+    y += 88
+save("risk", img)
+
+models = get("/api/v1/bim/models?project_id=1")
+elements = get(f"/api/v1/bim/models/{next(x for x in models if x['status']=='completed')['id']}/elements")
+img, d = shell("Digital Twin", "IFC element register linked to construction context.")
+y = 145
+for row in elements[:10]:
+    d.rounded_rectangle((280, y, 1360, y + 54), radius=8, fill=PANEL, outline=LINE)
+    text(d, (300, y + 16), row["element_type"], ACCENT)
+    text(d, (475, y + 16), row["name"], TEXT)
+    text(d, (820, y + 16), row["ifc_guid"], MUTED)
+    progress(d, (1130, y + 20), row["progress_percent"], 0, 150)
+    y += 62
+save("digital-twin", img)
+
+for name, title, path, key in [
+    ("progress-review", "Progress Review", "/api/v1/progress/observations?project_id=1", "evidence_url"),
+    ("change-analysis", "Change Analysis", "/api/v1/changes?project_id=1", "overlay_url"),
+    ("safety", "Safety Operations", "/api/v1/safety/events?project_id=1", "evidence_url"),
+    ("quality", "Quality Intelligence", "/api/v1/quality/observations?project_id=1", "evidence_url"),
+]:
+    rows = get(path)
+    img, d = shell(title, "Evidence and review records generated by the local processing pipeline.")
+    x, y = 280, 145
+    for row in rows[:4]:
+        d.rounded_rectangle((x, y, x + 500, y + 300), radius=10, fill=PANEL, outline=LINE)
+        paste_evidence(img, (x + 12, y + 12, x + 488, y + 190), row.get(key, ""))
+        label = row.get("activity") or row.get("candidate_type") or row.get("event_type") or f"Change {row.get('id')}"
+        wrap(d, (x + 18, y + 205), str(label).replace("_", " "), 430, TEXT)
+        status(d, (x + 18, y + 252), str(row.get("review_status") or row.get("status") or row.get("severity") or "record"))
+        x += 530
+        if x > 920:
+            x, y = 280, y + 330
+    save(name, img)
+
+for name, title, path in [
+    ("cameras", "Camera Health", "/api/v1/cameras?project_id=1"),
+    ("alerts", "Alerts", "/api/v1/alerts?project_id=1"),
+    ("reports", "Reports", "/api/v1/reports?project_id=1"),
+    ("audit", "Audit Log", "/api/v1/audit?project_id=1"),
+]:
+    rows = get(path)
+    img, d = shell(title, "Operational records from the seeded public-data demo.")
+    y = 145
+    for row in rows[:10]:
+        d.rounded_rectangle((280, y, 1360, y + 54), radius=8, fill=PANEL, outline=LINE)
+        text(d, (300, y + 16), str(row.get("id", "")), ACCENT)
+        wrap(d, (360, y + 10), json.dumps(row, default=str)[:210], 880, TEXT)
+        y += 62
+    save(name, img)
+
+for name, title, subtitle in [
+    ("landing", "BuildTwin Vision", "Evidence-first 4D construction intelligence using public DOB permit samples and local vision outputs."),
+    ("login", "Local Demo Login", "Use deterministic demo credentials; data is public/sample and not a customer deployment."),
+    ("captures", "Site Captures", "Persisted image and MP4 evidence generated by the local demo pipeline."),
+    ("pdf-report-preview", "PDF Report Preview", "Report generated from persisted KPIs, risks, alerts, and public permit sample metadata."),
+]:
+    img, d = shell(title, subtitle)
+    d.rounded_rectangle((330, 240, 1120, 530), radius=18, fill=PANEL, outline=LINE)
+    wrap(d, (380, 300), subtitle, 650, TEXT, 24)
+    card(d, (390, 400, 560, 500), "Public records", dataset["records"], "NYC DOB")
+    card(d, (590, 400, 760, 500), "Activities", len(activities), "Seeded schedule")
+    card(d, (790, 400, 960, 500), "Reports", len(get("/api/v1/reports?project_id=1")), "PDF output")
+    save(name, img)
+
+print(f"rendered {len(list(OUT.glob('*.png')))} PNG previews from FastAPI seeded data")

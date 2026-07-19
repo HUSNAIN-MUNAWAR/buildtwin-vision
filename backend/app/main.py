@@ -25,6 +25,7 @@ from app.risk.model import calculate_delay_risk
 from app.schedule.engine import critical_path, load_schedule
 from app.services.audit import record_audit
 from app.services.dashboard import executive_dashboard
+from app.services.public_dataset import DATASET_PUBLISHER, DATASET_SOURCE, DATASET_TERMS, DATASET_TITLE
 from app.services.seed import seed_database
 from app.vision.change_detection import compare_images
 from app.vision.video_reader import process_video
@@ -103,6 +104,12 @@ def project_detail(project_id:int,user:User=Depends(current_user),db:Session=Dep
 @app.get("/api/v1/dashboard/executive")
 def dashboard(project_id:int,user:User=Depends(current_user),db:Session=Depends(get_db)):
     scoped(db,Project,user,project_id); return executive_dashboard(db,user.organization_id,project_id)
+
+@app.get("/api/v1/datasets/public-demo")
+def public_dataset_demo(project_id:int,user:User=Depends(current_user),db:Session=Depends(get_db)):
+    scoped(db,Project,user,project_id)
+    rows=db.scalars(select(Activity).where(Activity.organization_id==user.organization_id,Activity.project_id==project_id,Activity.external_id.like("NYC-DOB-%")).order_by(Activity.planned_start)).all()
+    return {"title":DATASET_TITLE,"publisher":DATASET_PUBLISHER,"source":DATASET_SOURCE,"terms":DATASET_TERMS,"records":len(rows),"activity_ids":[a.external_id for a in rows],"planned_progress":round(sum(a.planned_progress for a in rows)/len(rows),1) if rows else 0,"approved_progress":round(sum(a.approved_progress for a in rows)/len(rows),1) if rows else 0}
 
 @app.get("/api/v1/dashboard/progress")
 def progress_dashboard(project_id:int,user:User=Depends(current_user),db:Session=Depends(get_db)):
