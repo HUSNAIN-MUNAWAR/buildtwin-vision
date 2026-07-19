@@ -1,7 +1,7 @@
 # Verification report
 
 Latest local verification date: 2026-07-19.
-Latest GitHub Actions verification before this dataset refresh: run `29664869649` on `main` passed backend, frontend, and Docker jobs. A new run should start after the public-dataset commit is pushed.
+Latest GitHub Actions verification: run `29678149082` on `main` passed backend, frontend, and Docker jobs for commit `c2eeb4a`.
 
 | Check | Command | Result | Evidence / limitation |
 |---|---|---|---|
@@ -16,8 +16,8 @@ Latest GitHub Actions verification before this dataset refresh: run `29664869649
 | Frontend test | `npm run test` | Passed | Required navigation test |
 | Frontend install | `npm ci` | Not completed locally | Timed out after 5 minutes in this Windows environment and left incomplete `node_modules`; CI remains configured to run clean Linux `npm ci` |
 | Frontend lint/typecheck/build | `npm run lint`, `npm run typecheck`, `npm run build` | Not completed locally | `eslint`, `tsc`, and `next` were unavailable because local dependency install did not complete |
-| GitHub frontend CI | `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` | Pending for this commit | Previous clean GitHub Actions Linux runner passed before public-dataset refresh |
-| GitHub Docker CI | `docker compose config`, `docker compose build` | Pending for this commit | Previous clean GitHub Actions Linux runner passed before public-dataset refresh |
+| GitHub frontend CI | `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` | Passed | Run `29678149082` on clean GitHub Actions Linux runner |
+| GitHub Docker CI | `docker compose config`, `docker compose build` | Passed | Run `29678149082` on clean GitHub Actions Linux runner |
 | PDF API | Backend integration test | Passed | Response starts with `%PDF` |
 | Docker runtime | `docker --version` | Not available | Docker CLI is not installed in this environment |
 | Portfolio previews | `py scripts\render_previews.py` | Passed | 16 PNG previews regenerated from authenticated FastAPI seeded data and generated media; script uses Pillow and FastAPI TestClient |
