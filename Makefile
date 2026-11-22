@@ -34,6 +34,9 @@ build:
 demo: seed
 	@echo "Run 'make backend' and 'make frontend' in separate terminals, then open http://localhost:3000"
 
+runtime-evidence:
+	PYTHONPATH=backend python scripts/generate_runtime_evidence.py
+
 clean:
 	rm -rf backend/.pytest_cache backend/.mypy_cache backend/.ruff_cache frontend/.next
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +

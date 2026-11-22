@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-11-22T20:11:16.991003+00:00",
+  "environment": {
+    "os": "Windows-11-10.0.22631-SP0",
+    "python": "3.12.10",
+    "opencv": "4.13.0"
+  },
+  "source": {
+    "file": "sample_data/videos/level1_progress.mp4",
+    "sha256": "16f23e37a3802d3edd6224bf1016269e54460732e156adbb27257924a599e732",
+    "synthetic_demo_input": true,
+    "metadata": {
+      "fps": 12.0,
+      "decoded_frames": 72,
+      "sampled_frames": 6,
+      "duration_seconds": 6.0
+    }
+  },
+  "pipeline": {
+    "processor": "BuildTwin backend.app.vision.video_reader.process_video",
+    "algorithm": "OpenCV grayscale conversion and Canny edge-density measurement",
+    "sample_every": 12,
+    "max_frames": 72,
+    "decoded_frames": 72,
+    "sampled_frames": 6,
+    "average_frame_latency_ms": 5.807,
+    "encoded_output": {
+      "frames": 6,
+      "fps": 1.0,
+      "width": 640,
+      "height": 360
+    }
+  },
+  "artifacts": {
+    "annotated_video": {
+      "path": "docs/runtime_evidence/buildtwin-progress-runtime.mp4",
+      "bytes": 27415,
+      "sha256": "aaf65675ef63b6587b7c45c50a0b8a1b2c694758c9c0d0751ae6c98f6c161ada"
+    },
+    "poster": {
+      "path": "docs/runtime_evidence/buildtwin-progress-runtime-poster.jpg",
+      "bytes": 15166,
+      "sha256": "635b436cac94ba00256f00d81550ba12287fffb4d879ff42c87645ed3269263f"
+    },
+    "edge_trace": {
+      "path": "docs/runtime_evidence/buildtwin-progress-edge-trace.csv",
+      "bytes": 144,
+      "sha256": "75b0c609b321f056f69873324ff0a07b04f6b5c2bcab85fe6809e4bda73d3a37"
+    }
+  },
+  "claim_boundary": [
+    "This is a real OpenCV processing run over the committed encoded demo MP4.",
+    "The source video is synthetic demo input; it is not construction-site footage or a labeled benchmark.",
+    "The runtime measures image edge density and does not detect construction defects, workers, equipment, or BIM correspondence.",
+    "No learned vision checkpoint, model training, accuracy score, or fabricated detection is claimed."
+  ]
+}

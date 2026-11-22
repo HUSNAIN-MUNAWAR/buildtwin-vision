@@ -92,6 +92,22 @@ During `python -m app.cli reset-seed`, the importer validates the CSV, maps perm
 
 See [docs/DATASET.md](docs/DATASET.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution, fields used, fields omitted, transformations, limitations, and reproduction notes.
 
+### Measured video runtime evidence
+
+The repository now preserves a real run of the existing OpenCV video processor over the committed `level1_progress.mp4` demo input. It decoded 72 frames, sampled 6 frames, measured edge density, and encoded a 6-frame annotated MP4 animation with a CSV trace.
+
+```powershell
+$env:PYTHONPATH = "backend"
+py -3.12 scripts/generate_runtime_evidence.py
+```
+
+- [Annotated runtime animation](docs/runtime_evidence/buildtwin-progress-runtime.mp4)
+- [Runtime poster](docs/runtime_evidence/buildtwin-progress-runtime-poster.jpg)
+- [Edge-density trace](docs/runtime_evidence/buildtwin-progress-edge-trace.csv)
+- [Hashable runtime summary and claim boundary](docs/runtime_evidence/buildtwin-progress-runtime-summary.json)
+
+The input is synthetic demo media, and the processor is an OpenCV edge-density baseline. It does not claim a trained construction model, defect detection, BIM registration, or field accuracy. See [docs/runtime_evidence/README.md](docs/runtime_evidence/README.md).
+
 ## Technology Stack
 
 - **Backend:** Python 3.12, FastAPI, SQLAlchemy, Alembic, Pydantic, PyJWT, OpenCV, NumPy, NetworkX, Shapely, ReportLab, pytest, Ruff, mypy.
