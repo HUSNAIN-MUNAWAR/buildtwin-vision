@@ -41,7 +41,7 @@ def process_video(
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
         writer = cv2.VideoWriter(
             annotated_output,
-            cv2.VideoWriter_fourcc(*"mp4v"),
+            getattr(cv2, "VideoWriter_fourcc")(*"mp4v"),
             fps / max(1, sample_every) if fps > 0 else 1.0,
             (width, height),
         )
@@ -77,7 +77,7 @@ def process_video(
     cap.release()
     if writer is not None:
         writer.release()
-        outputs.append(annotated_output)
+        outputs.append(str(annotated_output))
     if trace_output:
         trace_path = Path(trace_output)
         trace_path.parent.mkdir(parents=True, exist_ok=True)
