@@ -12,7 +12,7 @@ from app.risk.model import calculate_delay_risk
 from app.schedule.engine import load_schedule
 from app.services.public_dataset import public_permit_schedule_rows, read_public_permits
 from app.vision.change_detection import compare_images
-from app.vision.video_reader import process_video
+from app.vision.video_reader import _write_frame, process_video
 from app.vision.zone_geometry import box_centroid_inside, validate_polygon
 
 
@@ -20,6 +20,12 @@ def test_polygon_geometry():
     poly=[[0,0],[100,0],[100,100],[0,100]]; validate_polygon(poly)
     assert box_centroid_inside(poly,{"x1":20,"y1":20,"x2":40,"y2":40})
     assert not box_centroid_inside(poly,{"x1":120,"y1":20,"x2":140,"y2":40})
+
+
+def test_video_evidence_write_failure_is_explicit(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.vision.video_reader.cv2.imwrite", lambda *_args: False)
+    with pytest.raises(RuntimeError, match="could not write inspection evidence"):
+        _write_frame(tmp_path / "frame.jpg", np.zeros((8, 8, 3), dtype=np.uint8))
 
 
 def test_cycle_detection(tmp_path):

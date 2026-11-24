@@ -18,6 +18,11 @@ class VideoMetrics:
     output_paths: list[str]
 
 
+def _write_frame(path: Path, frame) -> None:
+    if not cv2.imwrite(str(path), frame):
+        raise RuntimeError(f"OpenCV could not write inspection evidence: {path}")
+
+
 def process_video(
     path: str,
     output_dir: str,
@@ -39,6 +44,9 @@ def process_video(
     if annotated_output:
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        if width <= 0 or height <= 0:
+            cap.release()
+            raise ValueError("Video dimensions are invalid")
         writer = cv2.VideoWriter(
             annotated_output,
             getattr(cv2, "VideoWriter_fourcc")(*"mp4v"),
@@ -61,7 +69,7 @@ def process_video(
                 frame, f"frame={decoded} edge_density={edge_density:.3f}", (16, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2
             )
             output = out / f"frame_{decoded:05d}.jpg"
-            cv2.imwrite(str(output), frame)
+            _write_frame(output, frame)
             outputs.append(str(output))
             sampled += 1
             if writer is not None:
